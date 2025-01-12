@@ -2,3 +2,22 @@ name: Global-Bans
 version: '0.01-ALPHA'
 main: org.sevensrequiem.globalBans.Main
 api-version: '1.21'
+author: SevensRequiem
+description: Global Ban System
+commands:
+  gban:
+    description: Global Ban Command
+    usage: /gban <player> <reason>
+    permission: globalban.use
+  gunban:
+    description: Global Unban Command
+    usage: /gunban <player>
+    permission: globalunban.use
+  gbanlist:
+    description: Global Ban List Command
+    usage: /gbanlist
+    permission: globalbanlist.use
+  gbanreload:
+    description: Global Ban Reload Command
+    usage: /gbanreload
+    permission: globalbanreload.use
