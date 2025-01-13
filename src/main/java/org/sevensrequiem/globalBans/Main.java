@@ -1,6 +1,7 @@
 package org.sevensrequiem.globalBans;
 
 import org.bukkit.Bukkit;
+import org.bukkit.event.Listener;
 import org.bukkit.plugin.Plugin;
 import org.bukkit.plugin.java.JavaPlugin;
 import org.bukkit.configuration.file.FileConfiguration;
@@ -9,6 +10,8 @@ import org.bukkit.configuration.InvalidConfigurationException;
 import org.bukkit.plugin.PluginLogger;
 import org.bukkit.command.*;
 import org.bukkit.entity.Player;
+import org.bukkit.event.player.PlayerJoinEvent;
+import org.bukkit.event.EventHandler;
 
 import java.io.BufferedReader;
 import java.io.InputStreamReader;
@@ -36,7 +39,7 @@ public final class Main extends JavaPlugin {
         createConfig();
         generateServerID();
         ping();
-        banWatcher();
+        new Banwatcher(this);
         this.getCommand("gban").setExecutor(new CommandGban());
         this.getCommand("gunban").setExecutor(new CommandGunban());
         this.getCommand("gbanlist").setExecutor(new CommandGbanlist());
@@ -80,6 +83,7 @@ public final class Main extends JavaPlugin {
             URL requestUrl = new URL(serverUrl.toString() + "/api/minecraft/server?ip=" + ip + "&port=" + Bukkit.getServer().getPort());
             HttpURLConnection connection = (HttpURLConnection) requestUrl.openConnection();
             connection.setRequestMethod("POST");
+            connection.setRequestProperty("Authorization", "Bearer " + configFile.getString("apikey"));
             connection.connect();
             int responseCode = connection.getResponseCode();
             if (responseCode == 200) {
@@ -113,6 +117,7 @@ public final class Main extends JavaPlugin {
             URL requestUrl = new URL(serverUrl.toString() + "/api/minecraft/ping");
             HttpURLConnection connection = (HttpURLConnection) requestUrl.openConnection();
             connection.setRequestMethod("GET");
+            connection.setRequestProperty("Authorization", "Bearer " + configFile.getString("apikey"));
             connection.connect();
             int responseCode = connection.getResponseCode();
             if (responseCode == 200) {
@@ -144,9 +149,21 @@ public final class Main extends JavaPlugin {
         return null;
     }
 
-    private void banWatcher() {
-        // Implement the banWatcher method
+public class Banwatcher implements Listener {
+    public Banwatcher(Main plugin) {
+        plugin.getServer().getPluginManager().registerEvents(this, plugin);
     }
+
+    @EventHandler
+    public void onPlayerJoin(PlayerJoinEvent event) {
+        Player player = event.getPlayer();
+        Database database = new Database();
+        if (database.CompareUserIP(player.getAddress().getAddress().getHostAddress())) {
+            player.kickPlayer("You are banned from this server: " + database.GetBanReason(player.getAddress().getAddress().getHostAddress()));
+        }
+
+    }
+}
 
     public static class CommandGban implements CommandExecutor {
 
@@ -165,7 +182,7 @@ public final class Main extends JavaPlugin {
                 }
                 Bans bans = new Bans(instance);
                 bans.GlobalBan(player.getName(), args[0], args[1], args.length > 2 ? args[2] : "No reason provided");
-
+                player.kickPlayer("You have been banned from this server: " + args[1]);
             }
             return false;
         }

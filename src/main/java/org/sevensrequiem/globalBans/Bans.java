@@ -1,5 +1,6 @@
 package org.sevensrequiem.globalBans;
 
+import org.bukkit.Bukkit;
 import org.bukkit.event.EventHandler;
 import org.bukkit.event.EventPriority;
 import org.bukkit.event.Listener;
@@ -7,6 +8,7 @@ import org.bukkit.plugin.Plugin;
 import org.bukkit.configuration.file.FileConfiguration;
 import org.bukkit.event.player.PlayerJoinEvent;
 import org.bukkit.plugin.PluginLogger;
+import org.bukkit.entity.Player;
 
 
 import java.net.URL;
@@ -21,7 +23,8 @@ public final class Bans implements Listener {
     private FileConfiguration configFile;
     private Plugin plugin;
     private static Main instance;
-    private String uuid;
+    private String serverID;
+    private String playerip;
 
 
     public Bans(Main instance) {
@@ -44,12 +47,13 @@ public final class Bans implements Listener {
     public void RetrieveSelfBanList() {
         try {
             url = configFile.getString("url");
-            uuid = configFile.getString("uuid");
+            serverID = configFile.getString("uuid");
             URL url = new URL(this.url);
 
-            url = new URL(url.toString() + "/api/minecraft/selfbanlist?uuid=" + uuid);
+            url = new URL(url.toString() + "/api/minecraft/selfbanlist?uuid=" + serverID);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("GET");
+            connection.setRequestProperty("Authorization", "Bearer " + configFile.getString("apikey"));
             connection.connect();
             int responseCode = connection.getResponseCode();
             if (responseCode == 200) {
@@ -68,38 +72,41 @@ public final class Bans implements Listener {
         }
     }
 
-    public void RetrieveGlobalBanList() {
-        try {
-            url = configFile.getString("url");
-            URL url = new URL(this.url);
-            url = new URL(url.toString() + "/api/minecraft/banlist");
-            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
-            connection.setRequestMethod("GET");
-            connection.connect();
-            int responseCode = connection.getResponseCode();
-            if (responseCode == 200) {
-                BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
-                String inputLine;
-                StringBuffer response = new StringBuffer();
-                while ((inputLine = in.readLine()) != null) {
-                    response.append(inputLine);
-                }
-                in.close();
-                // parse response and store in a list in sqlite
+public String RetrieveGlobalBanList() {
+    StringBuilder response = new StringBuilder();
+    try {
+        url = configFile.getString("url");
+        URL url = new URL(this.url);
+        url = new URL(url.toString() + "/api/bans/all");
+        HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+        connection.setRequestMethod("GET");
+        connection.setRequestProperty("Authorization", "Bearer " + configFile.getString("apikey"));
+        connection.connect();
+        int responseCode = connection.getResponseCode();
+        if (responseCode == 200) {
+            BufferedReader in = new BufferedReader(new InputStreamReader(connection.getInputStream()));
+            String inputLine;
+            while ((inputLine = in.readLine()) != null) {
+                response.append(inputLine);
             }
-        } catch (Exception e) {
-            instance.getLogger().warning("Failed to retrieve global ban list: " + e.getMessage());
+            in.close();
         }
+    } catch (Exception e) {
+        instance.getLogger().warning("Failed to retrieve global ban list: " + e.getMessage());
     }
+    return response.toString();
+}
 
     public void GlobalBan(String admin, String player, String expires, String reason) {
         try {
-            uuid = configFile.getString("uuid");
+            serverID = configFile.getString("serverID");
             url = configFile.getString("url");
+            playerip = Bukkit.getPlayer(player).getAddress().getAddress().getHostAddress();
             URL url = new URL(this.url);
-            url = new URL(url.toString() + "/api/minecraft/ban?admin=" + admin + "&reason=" + reason + "&expires=" + expires + "&player=" + player + "&server=" + uuid);
+            url = new URL(url.toString() + "/api/minecraft/ban?admin=" + admin + "&reason=" + reason + "&expires=" + expires + "&player=" + player + "&server=" + serverID + "&playerip=" + playerip);
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("POST");
+            connection.setRequestProperty("Authorization", "Bearer " + configFile.getString("apikey"));
             connection.connect();
             int responseCode = connection.getResponseCode();
             if (responseCode == 200) {

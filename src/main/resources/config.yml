@@ -1,4 +1,15 @@
+
+# Your Global Bans Instance domain/ip+port
 url: https://devbans.anet.moe
+
+# Your Global Bans Instance API Key
+apikey: 00000000-0000-0000-0000-000000000000
+
+# How often the plugin should check for new bans in minutes (minimum 1)
+checkInterval: 5
+
+# SQLITE Directory/Path
+sqlite: bans.db
 
 # DO NOT CHANGE, DO NOT SHARE
 serverID: 00000000-0000-0000-0000-000000000000
